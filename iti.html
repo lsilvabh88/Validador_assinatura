@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<!-- <script type="text/javascript" src="./js/head.js"></script> -->
+<html lang="pt-BR">
+
+<head>
+  <script src="./js/componentes/cookiesImport.js"></script>
+
+  <meta http-equiv="cache-control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Acesse o Validador de Certificados Digitais do Governo Federal, uma ferramenta oficial para verificar a validade de certificados digitais utilizados em serviÃ§os e sistemas do governo brasileiro.">
+
+  <title>Validador de Assinaturas</title>
+  <link rel="icon" type="image/x-icon" href="./imagens/favicon-48x48.png">
+
+  <!--Importar CSS-->
+  <link rel="stylesheet" href="./css/all.css" />
+  <link rel="stylesheet" href="./css/core.css" />
+  <link rel="stylesheet" href="./css/css.css" />
+  <link rel="stylesheet" href="./node_modules/@govbr-ds/core/dist/core.css">
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/all.min.css">
+  <link rel="stylesheet" href="./css/customStyle.css">
+  <link rel="stylesheet" href="./css/boostrap.css">
+  <link rel="stylesheet" type="text/css" href="./css/print.min.css">
+
+  <!-- Importar JS -->
+  <script type="text/javascript" src="./js/bibliotecas/jquery.min.js"></script>
+  <script type="text/javascript" src="./js/bibliotecas/jquery.mask.js"></script>
+  <!-- <script type="text/javascript" src="./js/bibliotecas/core-init.js"></script> -->
+  <script type="text/javascript" src="./js/services/requestHandler.js"></script>
+  <script type="text/javascript" src="./js/bibliotecas/sweetalert2.all.min.js"></script>
+  <script type="text/javascript" src="./js/bibliotecas/popper.min.js"></script>
+  <script type="text/javascript" src="./js//bibliotecas/boostrap.js"></script>
+
+  <!-- NÃO SEI -->
+  <!-- <script type="text/javascript" src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+  <script type="text/javascript" src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script> -->
+
+  <!-- TRADUÃÃO -->
+  <script type="text/javascript" src="./js/translation/index.js"></script>
+  <script type="text/javascript" src="./js/translation/componentes.js"></script>
+
+  <!-- COMPONENTES -->
+  <script type="text/javascript" src="./js/componentes/custom.js"></script>
+
+  <script type="text/javascript" src="./js/componentes/header.js"></script>
+  <script type="text/javascript" src="./js/componentes/menu.js"></script>
+  <script type="text/javascript" src="./js/componentes/searchFilterCustom.js"></script>
+  <script src="https://unpkg.com/@zxing/library@latest"></script>
+  <script type="text/javascript" src="./js/bibliotecas/qrBase.js"></script>
+  <script type="text/javascript" src="./js/bibliotecas/qrCode.js"></script>
+
+  <script src="https://unpkg.com/@zxing/library@latest"></script>
+  <script type="text/javascript" src="./js/bibliotecas/qrBase.js"></script>
+  <script type="text/javascript" src="./js/bibliotecas/qrCode.js"></script>
+
+
+
+</head>
+
+<body>
+  <div class="template-base d-flex">
+    <script>
+      sessionStorage.removeItem("urlQr");
+      if (sessionStorage.getItem('black') == null) {
+        sessionStorage.setItem('black', 'false')
+      }
+      sessionStorage.setItem('page', 'index')
+      if (sessionStorage.getItem('language') == null) {
+        sessionStorage.setItem('language', 'portuga')
+      }
+      translate();
+      translateheaders();
+    </script>
+
+    <!--BODY/CARD PRINCIPAL  banner-novo-->
+    <section>
+      <div class="container">
+        <div class="row justify-content-center">
+          <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 text-center ">
+            <section id="mainCard">
+              <div class="text-center pvalidador">
+                <noscript aria-label="Aviso de Javascript desabilitado">
+                  <dl>
+                    <dt>AtenÃ§Ã£o!</dt>
+                    <dd>Seu navegador nÃ£o pode executar javascript. Alguns recursos podem nÃ£o funcionar corretamente.
+                    </dd>
+                  </dl>
+                </noscript>
+                <div class="mainframe">
+
+                  <div class="row">
+                    <div class="col-sm-12 col-md-8" style="min-width: 100%;">
+                      <div class="br-carousel mt-3" data-circular="true" style="min-height: 150px;">
+                        <div class="carousel-button">
+                          <button class="br-button carousel-btn-prev terciary circle" type="button"
+                            aria-label="Anterior">
+                            <span class="fas fa-chevron-left" aria-hidden="true"></span>
+                          </button>
+                        </div>
+                        <div class="carousel-stage">
+                          <div class="carousel-page" active="active">
+                            <a href="./guia.html"><img class="d-block bannerCarrossel"
+                                src="./imagens/Banner_Guia-de-PrÃ¡ticas_Ass-Eletronica_v1.png"
+                                alt="Primeiro Slide" /></a>
+                          </div>
+                          <div class="carousel-page">
+                            <a
+                              href="https://www.gov.br/iti/pt-br/assuntos/noticias/indice-de-noticias/iti-publica-normativa-sobre-o-servico-validar"><img
+                                class="d-block bannerCarrossel" src="./imagens/portaria-validar.png"
+                                alt="Segundo Slide" /></a>
+                          </div>
+                        </div>
+                        <div class="carousel-button">
+                          <button class="br-button carousel-btn-next terciary circle" type="button"
+                            aria-label="PrÃ³ximo">
+                            <span class="fas fa-chevron-right" aria-hidden="true"></span>
+                          </button>
+                        </div>
+                        <div class="carousel-step">
+                          <div class="br-step" data-initial="1" data-type="simple">
+                            <div class="step-progress">
+                              <button class="step-progress-btn" type="button">
+                                <span class="step-info">Exemplo de RÃ³tulo 1</span>
+                              </button>
+                              <button class="step-progress-btn" type="button">
+                                <span class="step-info">Exemplo de RÃ³tulo 2</span>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="mainInfo " style="font-size: 0px; padding: 20px;">
+                    <div>
+                      <p class="branco" id="spanIndex" tabindex="0" aria-label="Submeta agora mesmo seu documento ao serviÃ§o oficial de validaÃ§Ã£o de assinaturas eletrÃ´nicas do governo e descubra online, e instantaneamente, o status de assinaturas eletrÃ´nicas ICP-Brasil, GOV.BR ou provenientes de acordos internacionais de reconhecimento mÃºtuo para atender Ã s suas necessidades de seguranÃ§a e confiabilidade.">
+                        Submeta agora mesmo seu documento ao serviÃ§o oficial de validaÃ§Ã£o de assinaturas eletrÃ´nicas do
+                        governo e descubra online, e instantaneamente, o status de assinaturas eletrÃ´nicas ICP-Brasil,
+                        GOV.BR ou provenientes de acordos internacionais de reconhecimento mÃºtuo para atender Ã s suas
+                        necessidades de seguranÃ§a e confiabilidade.
+                      </p>
+
+                      <p class="branco" id="spanIndex2" tabindex="0"aria-label="VocÃª tambÃ©m pode baixar o aplicativo VALIDAR QR CODE, em Android ou iOS, para validar documentos e certificados de atributo acessÃ­veis por QR Code. Tudo nos termos da Portaria ITI NÂº 22 de 28
+                      de setembro de 2023.">
+                        VocÃª tambÃ©m pode baixar o aplicativo VALIDAR QR CODE, em Android ou iOS, para validar documentos
+                        e certificados de atributo acessÃ­veis por QR Code. Tudo nos termos da Portaria ITI NÂº 22 de 28
+                        de setembro de 2023.
+                      </p>
+
+                      <p class="branco" id="spanIndex3" tabindex="0" aria-label="Ã importante ressaltar que nenhuma informaÃ§Ã£o ou arquivo sÃ£o armazenados nos ambientes operacionais do ITI. Os resultados da validaÃ§Ã£o limitam-se exclusivamente a identificar o titular do certificado digital utilizado e confirmar se o documento assinado nÃ£o sofreu nenhuma
+                      adulteraÃ§Ã£o apÃ³s a assinatura.">
+                        Ã importante ressaltar que nenhuma informaÃ§Ã£o ou arquivo sÃ£o armazenados nos ambientes
+                        operacionais do ITI. Os resultados da validaÃ§Ã£o limitam-se exclusivamente a identificar o
+                        titular do certificado digital utilizado e confirmar se o documento assinado nÃ£o sofreu nenhuma
+                        adulteraÃ§Ã£o apÃ³s a assinatura.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <hr class="mr-4 ml-4 mt-0">
+
+                <form id="form" method="POST" enctype="multipart/form-data" class="center">
+                  <div class="upload-wrapper" style="position: relative;">
+                    <div class="alert br-message info" role="alert">
+                      <p><strong>QR Code: </strong><span id="qrCodeI">SÃ³ serÃ£o submetidos QR Codes de documentos
+                          assinados</span><br><strong>URL:</strong> Ex: https://www.mypdf.com"</p>
+                    </div>
+                    <div class="flexOptions pt-2">
+                      <div class="row justify-content-around">
+                        <div class="col-sm-12 col-md-4 col-lg-4 col-xl-4">
+                          <button class="br-button secondary mt-3 mt-sm-0 ml-sm-3 blackMode" type="button"
+                            data-trigger="hover" data-container="body" data-toggle="popover" onclick="qrHandler()"
+                            data-placement="top" title="SÃ³ serÃ£o aceitos QR codes de documentos assinados"
+                            style="width: 210px;"><span class="fas fa-qrcode mr-1 branco"
+                              aria-hidden="true"></span> <span id="qrCodeBtn1">Ler QR code</span>
+
+                          </button>
+                        </div>
+                        <div class="col-sm-12 col-md-4 col-lg-4 col-xl-4">
+                          <button class="br-button secondary mt-3 mt-sm-0 ml-sm-3 blackMode" type="button"
+                            title="Formatos aceitos: pdf, xml ou p7s"
+                            id="fileselectorbutton">
+                            <span class="far fa-folder-open mr-1" aria-hidden="true"></span>
+                            <input class="form-control" type="file" id="signature_files" style="display: none;">
+                            <label for="signature_files" class="pt-2 mt-sm-0" id="buttaum">Escolher arquivo</label>
+                          </button>
+                          <div id="filebox" class="branco"></div>
+                        </div>
+
+
+                        <!-- SCRIPT ESCONDER O FILE SELECTOR -->
+                        <!-- <script>
+                          document.getElementById('fileselectorbutton').onclick = function () {
+                            document.getElementById('signature_files').click();
+                          };	
+                        </script> -->
+                        <div class="col-sm-10 col-md-4 col-lg-4 col-xl-4" id="urlDiv">
+                          <button class="br-button secondary mt-3 mt-sm-0 ml-sm-3 blackMode" type="button"
+                            title="Ex: https://www.mypdf.com" onclick="urlPopup()"
+                            style="width: 210px;"><span class="fas fa-link branco" aria-hidden="true"></span>
+                            <span id="urlselectorbutton" class="branco">&nbsp Colar URL</span></button>
+                        </div>
+                        <div class="col-sm-12 col-md-4 col-lg-4 col-xl-4 mt-3 destacada" style="display: none;"
+                          id="signature_files_detached">
+                          <button class="br-button secondary mt-3 mt-sm-0 ml-sm-3 blackMode" type="button"
+                            aria-label="Ãcone ilustrativo" title="Formatos aceitos: p7s"
+                            id="fileselectorbutton_detached"><span class="far fa-folder-open mr-1"
+                              aria-hidden="true"></span>
+                            <input class="form-control" type="file" id="signature_filesDetached" style="display: none;">
+                            <label for="signature_filesDetached" class="pt-2 mt-sm-0 ml-sm-3" id="assDestaButa">Arquivo de Assinatura Destaca
+                            </label>
+                          </button>
+                          <div class="pl-5" id="fileboxDestacada"></div>
+                        </div>
+                        <!-- <script>
+                          document.getElementById('fileselectorbutton_detached').onclick = function () {
+                            document.getElementById('signature_filesDetached').click();
+                          };	
+                        </script> -->
+                      </div>
+                    </div>
+                    <br>
+                    <div id="qrCodeWrapper" class="none m-3" style="width: 100% !important;">
+                      <div id="reader" class="qrReader col-sm-10 col-xs-10"></div>
+
+                      <div style="margin-top: 10px;">
+                        <input type="hidden" id="scanned-qrcode" name="scanned-qrcode" required>
+                      </div>
+                    </div>
+                    <div id="drop-area" class="drop-overlay">
+                      <div class="drop-message">
+                        Solte os arquivos aqui
+                      </div>
+                    </div>
+                    <div class="inputCheckbox flex justify-content-center mb-4 ml-4" id="detachedC">
+                      <input type="checkbox" id="detached" name="detached" class="checkboxTermos mb-1">
+                      <label for="detached" onclick="
+                      " id="detachedL">Assinatura Destacada</label>
+                    </div>
+                    <!-- Checkbox termos de uso -->
+                    <div id="test-area-qr-code-webcam" style="display: none;">
+                      <video id="video" class="scanner"></video>
+                      <br>
+                    </div>
+                    <div class="checkboxAndTerms">
+                      <div class="inputCheckbox checkboxTermosSquare">
+                        <input type="checkbox" id="acceptTerms" name="acceptTerms" class="checkboxTermos" aria-labelledby="teremosUsoC" required=""
+                          value="termos" onclick="clickcheckBox()">
+                      </div>
+                      <div class="termosDiv">
+                        <label for="acceptTerms" class="labelCheckbox" id="labelCheckbox">
+                        </label>
+                        <span id="termosDeUso" class="termosPop">
+                          <a onclick="modalTermos()" class="termosdeUso branco" id="teremosUsoC">
+                          </a>
+                        </span>
+                      </div>
+                    </div>
+                      <button id="validateSignature" type="button" class="br-button primary mb-3 mt-3 mt-sm-0 sendForm"
+                      onclick="">
+                      <span class="fas fa-upload mr-2" aria-hidden="true"></span><label class="mt-2" id="submitValidar">
+                        Validar
+                      </label>
+                    </button>
+
+                    <div class="loaderblue"><div class="loading mb-4" style="display: none; --loading-size: unset !important;"></div></div>
+                    <div class="d-flex justify-content-center align-items-center" id="loadingNew">
+                      <div class="br-loading" data-progress="2">
+                        <div class="br-loading-mask full">
+                          <div class="br-loading-fill"></div>
+                        </div>
+                        <div class="br-loading-mask">
+                          <div class="br-loading-fill"></div>
+                        </div>
+                      </div>
+                    </div>
+                    <div id="drop-area" class="drop-overlay">Solte os arquivos aqui</div>
+
+                  </div>
+                  <!-- CSS e modal dos termos de uso -->
+
+                  <!-- Submit o form por JS -->
+                  <!-- <input type="submit" id="submit" hidden="">-->
+                  <!-- Verificar checkbox para submit -->
+                </form>
+              </div>
+            </section>
+          </div>
+        </div>
+    </section>
+    <!--BOTÃES RODAPÃ-->
+
+  </div>
+  </div>
+  <script type="text/javascript" src="./js/componentes/fastAcess.js"></script>
+  <script type="text/javascript" src="./js/componentes/footer.js"></script>
+
+  <script>
+    function importCore() {
+      var script = document.createElement('script');
+      script.src = './node_modules/@govbr-ds/core/dist/core-init.js';
+      document.body.appendChild(script);
+    }
+    setTimeout(importCore, 500);
+  </script>
+
+  <div vw class="enabled">
+    <div vw-access-button class="active"></div>
+    <div vw-plugin-wrapper>
+      <div class="vw-plugin-top-wrapper"></div>
+    </div>
+  </div>
+  <script src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
+  <script>
+    new window.VLibras.Widget('https://vlibras.gov.br/app');
+  </script>
+  <script>
+    const accessButton = document.querySelector('div[vw-access-button]');
+
+    const mutationCallback = (mutationsList, observer) => {
+      for (const mutation of mutationsList) {
+        if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+          if (!accessButton.classList.contains('active')) {
+            document.getElementById('fileselectorbutton').onclick = function () {
+              document.getElementById('signature_files').click();
+            };
+
+          }
+        }
+      }
+    };
+
+    const observer = new MutationObserver(mutationCallback);
+
+    const config = { attributes: true };
+
+    observer.observe(accessButton, config);
+  </script>
+
+</body>
+
+<script src="./js/componentes/draganddrop.js"></script>
+
+</html>

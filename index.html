@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Validador de Assinatura - DTIS</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --mv-navy: #162233;
+            --mv-navy2: #1e3048;
+            --mv-accent: #2a9fd6;
+            --mv-accent2: #1a7fbf;
+            --bg: #eef1f5;
+            --card: #ffffff;
+            --text: #1e293b;
+            --muted: #5a7184;
+            --border: #d8e2ec;
+            --success-bg: #edfaf5;
+            --success-bd: #6ee7b7;
+            --success-tx: #065f46;
+            --warn-bg: #fffbeb;
+            --warn-bd: #fcd34d;
+            --warn-tx: #92400e;
+            --error-bg: #fff1f2;
+            --error-bd: #fca5a5;
+            --error-tx: #9b1c1c;
+        }
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ══════════════════════════════════════
+           HEADER  — identidade MV Soul
+        ══════════════════════════════════════ */
+        header {
+            background: var(--mv-navy);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 1.75rem;
+            height: 52px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, .35);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 1.1rem;
+        }
+
+
+        .mv-logo {
+            font-size: 1.18rem;
+            font-weight: 700;
+            letter-spacing: -.03em;
+            color: #fff;
+            line-height: 1;
+        }
+
+        .mv-logo span {
+            color: var(--mv-accent);
+        }
+
+        .header-divider {
+            width: 1px;
+            height: 22px;
+            background: rgba(255, 255, 255, .18);
+        }
+
+        .header-module {
+            font-size: .78rem;
+            font-weight: 500;
+            color: rgba(255, 255, 255, .75);
+            letter-spacing: .01em;
+        }
+
+        .header-right {
+            font-size: .75rem;
+            color: rgba(255, 255, 255, .55);
+            letter-spacing: .01em;
+        }
+
+        /* Faixa de sub-header */
+        .subheader {
+            background: var(--mv-navy2);
+            padding: .5rem 1.75rem;
+            display: flex;
+            align-items: center;
+            gap: .55rem;
+            border-bottom: 1px solid rgba(255, 255, 255, .06);
+        }
+
+        .subheader-tab {
+            font-size: .78rem;
+            font-weight: 500;
+            color: rgba(255, 255, 255, .6);
+            padding: .3rem .85rem;
+            border-radius: 4px 4px 0 0;
+            cursor: default;
+        }
+
+        .subheader-tab.active {
+            background: var(--bg);
+            color: var(--mv-navy);
+            font-weight: 600;
+        }
+
+
+        main {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 2.5rem 1rem 4rem;
+        }
+
+        /* Layout split quando o PDF está visível */
+        main.split-view {
+            align-items: stretch;
+            gap: 1.5rem;
+            padding: 1.5rem 1.5rem 3rem;
+        }
+
+        main.split-view .card {
+            max-width: 400px;
+            flex-shrink: 0;
+        }
+
+        /* Painel do PDF */
+        .pdf-panel {
+            display: none;
+            flex: 1;
+            min-width: 0;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 4px 24px rgba(22, 34, 51, .10);
+            overflow: hidden;
+            flex-direction: column;
+        }
+
+        .pdf-panel.visible {
+            display: flex;
+        }
+
+        .pdf-panel-header {
+            background: var(--mv-navy);
+            color: #fff;
+            padding: .65rem 1rem;
+            font-size: .78rem;
+            font-weight: 600;
+            letter-spacing: .03em;
+            display: flex;
+            align-items: center;
+            gap: .5rem;
+            flex-shrink: 0;
+        }
+
+        .pdf-panel iframe {
+            flex: 1;
+            border: none;
+            width: 100%;
+            min-height: 580px;
+        }
+
+        .pdf-loading {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: .75rem;
+            color: var(--muted);
+            font-size: .85rem;
+            padding: 2rem;
+        }
+
+        .card {
+            background: var(--card);
+            border-radius: 10px;
+            box-shadow: 0 4px 24px rgba(22, 34, 51, .10);
+            width: 100%;
+            max-width: 620px;
+            overflow: hidden;
+        }
+
+        /* Cabeçalho do card */
+        .card-header {
+            background: var(--mv-navy);
+            padding: 1rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: .75rem;
+        }
+
+        .card-header-icon {
+            font-size: 1.3rem;
+            line-height: 1;
+        }
+
+        .card-header-info h1 {
+            font-size: .95rem;
+            font-weight: 600;
+            color: #fff;
+            letter-spacing: .01em;
+        }
+
+        .card-header-info p {
+            font-size: .72rem;
+            color: rgba(255, 255, 255, .5);
+            margin-top: 1px;
+        }
+
+        /* Corpo do card */
+        .card-body {
+            padding: 1.5rem;
+        }
+
+        /* ── Formulário ── */
+        .input-label {
+            display: block;
+            font-size: .78rem;
+            font-weight: 600;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: .05em;
+            margin-bottom: .4rem;
+        }
+
+        input[type="url"] {
+            width: 100%;
+            padding: .7rem 1rem;
+            border: 1.5px solid var(--border);
+            border-radius: 6px;
+            font-size: .9rem;
+            font-family: 'Inter', sans-serif;
+            background: #f8fafc;
+            color: var(--text);
+            transition: border .2s, box-shadow .2s;
+            margin-bottom: 1rem;
+        }
+
+        input[type="url"]:focus {
+            outline: none;
+            border-color: var(--mv-accent);
+            background: #fff;
+            box-shadow: 0 0 0 3px rgba(42, 159, 214, .15);
+        }
+
+        .btn-validate {
+            display: flex;
+            flex-direction: row;
+            align-items: stretch;
+            width: 100%;
+            padding: 0;
+            background: var(--mv-accent);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            overflow: hidden;
+            font-family: 'Inter', sans-serif;
+            cursor: pointer;
+            transition: background .2s, transform .15s;
+            min-height: 80px;
+        }
+
+        .btn-validate .btn-img {
+            width: 90px;
+            flex-shrink: 0;
+            object-fit: cover;
+            display: block;
+        }
+
+        .btn-validate .btn-label {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: .88rem;
+            font-weight: 700;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            padding: 0 1rem;
+            border-top: 2px solid rgba(255, 255, 255, 0.65);
+            border-bottom: 2px solid rgba(255, 255, 255, 0.65);
+        }
+
+        .btn-validate:hover {
+            background: var(--mv-accent2);
+            transform: translateY(-1px);
+        }
+
+        .btn-validate:disabled {
+            opacity: .55;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* ── Loading ── */
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 1.2rem;
+            color: var(--mv-accent);
+            font-size: .88rem;
+            font-weight: 500;
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2.5px solid rgba(42, 159, 214, .2);
+            border-top-color: var(--mv-accent);
+            border-radius: 50%;
+            animation: spin .75s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* ── Resultado ── */
+        .result-area {
+            margin-top: 1.4rem;
+            border-radius: 8px;
+            border: 1.5px solid var(--border);
+            overflow: hidden;
+            animation: fadeUp .25s ease;
+        }
+
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(-6px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .result-area.success {
+            border-color: var(--success-bd);
+            background: var(--success-bg);
+        }
+
+        .result-area.warning {
+            border-color: var(--warn-bd);
+            background: var(--warn-bg);
+        }
+
+        .result-area.error {
+            border-color: var(--error-bd);
+            background: var(--error-bg);
+        }
+
+        .res-header {
+            padding: .75rem 1.2rem;
+            font-size: .88rem;
+            font-weight: 600;
+            border-bottom: 1px solid rgba(0, 0, 0, .06);
+            display: flex;
+            align-items: center;
+            gap: .4rem;
+        }
+
+        .success-header {
+            color: var(--success-tx);
+            background: rgba(16, 185, 129, .07);
+        }
+
+        .warn-header {
+            color: var(--warn-tx);
+            background: rgba(245, 158, 11, .07);
+        }
+
+        .error-header {
+            color: var(--error-tx);
+            background: rgba(239, 68, 68, .07);
+        }
+
+        .res-section {
+            padding: 1rem 1.2rem;
+            border-bottom: 1px solid rgba(0, 0, 0, .05);
+        }
+
+        .res-section:last-child {
+            border-bottom: none;
+        }
+
+        .sec-title {
+            font-size: .78rem;
+            font-weight: 700;
+            color: var(--mv-navy);
+            text-transform: uppercase;
+            letter-spacing: .05em;
+            margin-bottom: .7rem;
+            display: flex;
+            align-items: center;
+            gap: .4rem;
+        }
+
+        .info-grid {
+            display: flex;
+            flex-direction: column;
+            gap: .45rem;
+        }
+
+        .info-row {
+            display: flex;
+            align-items: baseline;
+            gap: .5rem;
+            flex-wrap: wrap;
+            font-size: .87rem;
+        }
+
+        .info-key {
+            font-size: .76rem;
+            font-weight: 600;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: .04em;
+            flex-shrink: 0;
+            min-width: 155px;
+        }
+
+        .info-key::after {
+            content: ':';
+        }
+
+        .info-val {
+            color: var(--text);
+            word-break: break-all;
+        }
+
+        .info-val.bold {
+            font-weight: 700;
+        }
+
+        .info-val.mono {
+            font-family: 'Courier New', monospace;
+            font-size: .79rem;
+        }
+
+        .info-val.link-style {
+            color: var(--mv-accent2);
+        }
+
+        /* sig layout */
+        .sig-layout {
+            display: flex;
+            gap: 1rem;
+            align-items: flex-start;
+            flex-wrap: wrap;
+        }
+
+        .sig-layout .info-grid {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        /* Badge ITI */
+        .badge-iti {
+            background: linear-gradient(160deg, #0d3580, #1a6fbb, #2a9fd6);
+            color: #fff;
+            border-radius: 8px;
+            padding: .85rem .95rem;
+            text-align: center;
+            min-width: 150px;
+            max-width: 170px;
+            flex-shrink: 0;
+            box-shadow: 0 4px 14px rgba(13, 53, 128, .3);
+        }
+
+        .badge-title {
+            font-size: .66rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .06em;
+            line-height: 1.3;
+            margin-bottom: .45rem;
+        }
+
+        .badge-logo {
+            font-size: 1.4rem;
+            font-weight: 900;
+            letter-spacing: -.02em;
+            margin-bottom: .25rem;
+        }
+
+        .badge-conf {
+            font-size: .58rem;
+            opacity: .82;
+            line-height: 1.4;
+            margin-bottom: .25rem;
+        }
+
+        .badge-footer {
+            font-size: .62rem;
+            font-weight: 700;
+            letter-spacing: .05em;
+            border-top: 1px solid rgba(255, 255, 255, .2);
+            padding-top: .3rem;
+            margin-top: .25rem;
+        }
+
+        /* Status */
+        .status-line {
+            margin-top: .75rem;
+            padding: .4rem .7rem;
+            border-radius: 5px;
+            font-size: .83rem;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        .status-ok {
+            background: rgba(16, 185, 129, .12);
+            color: #065f46;
+        }
+
+        .status-warn {
+            background: rgba(245, 158, 11, .12);
+            color: #92400e;
+        }
+
+        /* Pre/debug */
+        .pre-result {
+            background: rgba(0, 0, 0, .03);
+            border: 1px solid rgba(0, 0, 0, .06);
+            border-radius: 6px;
+            padding: .7rem .9rem;
+            font-family: 'Courier New', monospace;
+            font-size: .78rem;
+            white-space: pre-wrap;
+            word-break: break-word;
+            max-height: 300px;
+            overflow-y: auto;
+            line-height: 1.6;
+        }
+
+        /* ── Rodapé ── */
+        .app-footer {
+            background: var(--mv-navy);
+            color: rgba(255, 255, 255, .45);
+            text-align: center;
+            padding: .55rem 1.75rem;
+            font-size: .72rem;
+            letter-spacing: .02em;
+            border-top: 1px solid rgba(255, 255, 255, .06);
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <div class="header-left">
+            <div class="mv-logo">DTIS <span>2026</span></div>
+            <div class="header-divider"></div>
+            <div class="header-module">Validador de Assinatura Eletrônica</div>
+        </div>
+        <div class="header-right" id="header-clock"></div>
+    </header>
+
+
+    <div class="subheader">
+        <div class="subheader-tab active">Validação de Assinatura</div>
+    </div>
+
+    <!-- ── Conteúdo ─────────────────────────────────── -->
+    <main>
+        <div class="card">
+            <div class="card-header">
+                <div class="card-header-icon">
+                    <!-- QR Code SVG sample -->
+                    <svg width="42" height="42" viewBox="0 0 38 38" fill="none" xmlns="http://www.w3.org/2000/svg"
+                        style="background:#fff; border-radius:5px; padding:1px; display:block;">
+                        <rect width="38" height="38" fill="white" />
+                        <!-- Top-left finder -->
+                        <!-- Top-left finder -->
+                        <rect x="2" y="2" width="13" height="13" rx="1.5" fill="#162233" fill-opacity="0.1" />
+                        <rect x="3.5" y="3.5" width="10" height="10" rx="1" stroke="#162233" stroke-width="1.8"
+                            fill="none" />
+                        <rect x="6" y="6" width="5" height="5" rx="0.5" fill="#162233" />
+                        <!-- Top-right finder -->
+                        <rect x="23" y="2" width="13" height="13" rx="1.5" fill="#162233" fill-opacity="0.1" />
+                        <rect x="24.5" y="3.5" width="10" height="10" rx="1" stroke="#162233" stroke-width="1.8"
+                            fill="none" />
+                        <rect x="27" y="6" width="5" height="5" rx="0.5" fill="#162233" />
+                        <!-- Bottom-left finder -->
+                        <rect x="2" y="23" width="13" height="13" rx="1.5" fill="#162233" fill-opacity="0.1" />
+                        <rect x="3.5" y="24.5" width="10" height="10" rx="1" stroke="#162233" stroke-width="1.8"
+                            fill="none" />
+                        <rect x="6" y="27" width="5" height="5" rx="0.5" fill="#162233" />
+                        <!-- Data modules -->
+                        <rect x="18" y="2" width="3" height="3" rx="0.4" fill="#162233" />
+                        <rect x="18" y="7" width="3" height="3" rx="0.4" fill="#162233" fill-opacity="0.55" />
+                        <rect x="18" y="12" width="3" height="3" rx="0.4" fill="#162233" />
+                        <rect x="2" y="18" width="3" height="3" rx="0.4" fill="#162233" />
+                        <rect x="7" y="18" width="3" height="3" rx="0.4" fill="#162233" fill-opacity="0.55" />
+                        <rect x="12" y="18" width="3" height="3" rx="0.4" fill="#162233" />
+                        <rect x="18" y="18" width="3" height="3" rx="0.4" fill="#2a9fd6" />
+                        <rect x="23" y="18" width="3" height="3" rx="0.4" fill="#162233" />
+                        <rect x="28" y="18" width="3" height="3" rx="0.4" fill="#162233" fill-opacity="0.55" />
+                        <rect x="33" y="18" width="3" height="3" rx="0.4" fill="#162233" />
+                        <rect x="18" y="23" width="3" height="3" rx="0.4" fill="#162233" fill-opacity="0.55" />
+                        <rect x="23" y="23" width="3" height="3" rx="0.4" fill="#162233" />
+                        <rect x="28" y="28" width="3" height="3" rx="0.4" fill="#162233" fill-opacity="0.55" />
+                        <rect x="33" y="23" width="3" height="3" rx="0.4" fill="#162233" />
+                        <rect x="18" y="33" width="3" height="3" rx="0.4" fill="#162233" />
+                        <rect x="23" y="28" width="3" height="3" rx="0.4" fill="#162233" fill-opacity="0.55" />
+                        <rect x="33" y="33" width="3" height="3" rx="0.4" fill="#162233" />
+                        <rect x="28" y="33" width="3" height="3" rx="0.4" fill="#2a9fd6" />
+                    </svg>
+                </div>
+                <div class="card-header-info">
+                    <h1>Validador de Assinatura Eletrônica</h1>
+                    <p>Integração com o portal oficial validar.iti.gov.br — ICP-Brasil</p>
+                </div>
+            </div>
+
+            <div class="card-body">
+                <form id="validation-form">
+                    <label class="input-label" for="urlDocumento">
+                        Aponte o leitor de QR Code ao documento a ser validado
+                    </label>
+                    <input type="url" id="urlDocumento" name="urlDocumento" placeholder="https://..." required
+                        autocomplete="off">
+                    <button type="submit" class="btn-validate" id="validate-btn">
+                        <img src="media/Leitor.jpg" class="btn-img" alt="Leitor de QR Code">
+                        <span class="btn-label">Validar Assinatura</span>
+                    </button>
+                    <input type="file" id="fileUpload" style="display: none;" accept=".pdf,.p7s,.xml">
+                </form>
+
+                <div id="loading-state" class="loading hidden">
+                    <div class="spinner"></div>
+                    Consultando servidor do governo...
+                </div>
+
+                <div id="result-area" class="result-area hidden">
+                    <div id="result-text"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Painel PDF (visível após validação) ── -->
+        <div class="pdf-panel" id="pdf-panel">
+            <div class="pdf-panel-header">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                    <rect x="1" y="1" width="12" height="12" rx="2" stroke="white" stroke-width="1.4" />
+                    <path d="M4 5h6M4 7.5h6M4 10h4" stroke="white" stroke-width="1.2" stroke-linecap="round" />
+                </svg>
+                Documento Original — Conferência de Integridade
+            </div>
+            <div class="pdf-loading" id="pdf-loading">
+                <div class="spinner"></div>
+                Carregando documento...
+            </div>
+            <iframe id="pdf-frame" src="" style="display:none;" title="Documento PDF"></iframe>
+        </div>
+    </main>
+
+    <div class="app-footer">DTIS - Diretoria de Tecnologia da Informação em Saúde · validar.iti.gov.br</div>
+
+    <script>
+        // Relógio no header
+        function tick() {
+            const now = new Date();
+            document.getElementById('header-clock').textContent =
+                now.toLocaleDateString('pt-BR') + '  ' +
+                now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        }
+        tick(); setInterval(tick, 30000);
+    </script>
+    <script src="script.js?v=3"></script>
+</body>
+
+</html>
