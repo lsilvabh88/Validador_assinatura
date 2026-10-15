@@ -11,6 +11,7 @@ CORS(app)
 ITI_BASE         = 'https://validar.iti.gov.br/'
 ITI_VALIDAR_URL  = 'https://validar.iti.gov.br/url'         # Valida via URL (JSON)
 ITI_REL_SIMPLES  = 'https://validar.iti.gov.br/simples'     # Processa JSON bruto → relatório
+ITI_TIMEOUT      = 120                                      # Timeout de espera pelo servidor do governo (segundos)
 
 BASE_HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
@@ -109,7 +110,7 @@ def validar_url():
             ITI_VALIDAR_URL,
             headers=headers_json,
             json={'url': url_documento},
-            timeout=40
+            timeout=ITI_TIMEOUT
         )
 
         app.logger.info(f"ITI /url status: {r1.status_code}, body: {r1.text[:300]}")
@@ -140,7 +141,7 @@ def validar_url():
             ITI_REL_SIMPLES,
             headers=headers_json,
             json=json_bruto,
-            timeout=40
+            timeout=ITI_TIMEOUT
         )
 
         app.logger.info(f"ITI /simples status: {r2.status_code}")
@@ -181,12 +182,12 @@ def debug_json():
             'Content-Type': 'application/json',
             'Accept': 'application/json, text/plain, */*',
         }
-        r1 = session.post(ITI_VALIDAR_URL, headers=headers_json, json={'url': url_documento}, timeout=40)
+        r1 = session.post(ITI_VALIDAR_URL, headers=headers_json, json={'url': url_documento}, timeout=ITI_TIMEOUT)
         bruto = r1.json() if r1.ok else {'status': r1.status_code, 'body': r1.text[:500]}
 
         tratado = None
         if r1.ok:
-            r2 = session.post(ITI_REL_SIMPLES, headers=headers_json, json=bruto, timeout=40)
+            r2 = session.post(ITI_REL_SIMPLES, headers=headers_json, json=bruto, timeout=ITI_TIMEOUT)
             tratado = r2.json() if r2.ok else {'status': r2.status_code, 'body': r2.text[:500]}
 
         return jsonify({'bruto': bruto, 'tratado': tratado}), 200
@@ -219,7 +220,7 @@ def validar_arquivo():
         r1 = session.post(
             ITI_BASE + 'arquivo',
             files=files,
-            timeout=40
+            timeout=ITI_TIMEOUT
         )
 
         if r1.status_code == 400:
@@ -231,7 +232,7 @@ def validar_arquivo():
 
         # 3: Pede o relatório final em /simples
         headers_json = {**BASE_HEADERS, 'Content-Type': 'application/json', 'Accept': 'application/json, text/plain, */*'}
-        r2 = session.post(ITI_REL_SIMPLES, headers=headers_json, json=bruto_json, timeout=30)
+        r2 = session.post(ITI_REL_SIMPLES, headers=headers_json, json=bruto_json, timeout=ITI_TIMEOUT)
         
         if r2.status_code == 200:
             return jsonify({
