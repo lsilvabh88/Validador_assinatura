@@ -95,9 +95,153 @@
         }
 
         .header-right {
+            display: flex;
+            align-items: center;
+            gap: .85rem;
             font-size: .75rem;
-            color: rgba(255, 255, 255, .55);
+            color: rgba(255, 255, 255, .7);
             letter-spacing: .01em;
+        }
+
+        .header-clock {
+            font-variant-numeric: tabular-nums;
+            color: rgba(255, 255, 255, .7);
+        }
+
+        .header-divider-small {
+            width: 1px;
+            height: 16px;
+            background: rgba(255, 255, 255, .2);
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: .45rem;
+        }
+
+        .header-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: .35rem;
+            background: rgba(255, 255, 255, 0.08);
+            color: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            padding: .3rem .65rem;
+            border-radius: 5px;
+            font-size: .74rem;
+            font-weight: 500;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all .15s ease;
+            user-select: none;
+            line-height: 1.2;
+        }
+
+        .header-btn:hover {
+            background: rgba(42, 159, 214, 0.25);
+            color: #fff;
+            border-color: var(--mv-accent);
+            transform: translateY(-1px);
+        }
+
+        .header-btn:active {
+            transform: translateY(0);
+        }
+
+        .header-btn svg {
+            flex-shrink: 0;
+        }
+
+        /* ── Modal Popup (Sobre / Ajuda) ── */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(15, 23, 42, 0.45);
+            backdrop-filter: blur(2px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
+        .modal-overlay.hidden {
+            display: none !important;
+        }
+
+        .modal-card {
+            background: #ffffff;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 460px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.18), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            animation: modalPop 0.18s ease-out;
+            overflow: hidden;
+            border: 1px solid rgba(0, 0, 0, 0.08);
+        }
+
+        @keyframes modalPop {
+            from {
+                opacity: 0;
+                transform: scale(0.96) translateY(-8px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.85rem 1.25rem;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .modal-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin: 0;
+        }
+
+        .modal-close {
+            background: transparent;
+            border: none;
+            font-size: 1.15rem;
+            line-height: 1;
+            color: #94a3b8;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: all 0.15s ease;
+        }
+
+        .modal-close:hover {
+            color: #1e293b;
+            background: #f1f5f9;
+        }
+
+        .modal-body {
+            padding: 1.5rem 1.25rem 1.75rem;
+            font-size: 0.88rem;
+            color: #2b5282;
+            line-height: 1.55;
+        }
+
+        .modal-body a {
+            color: var(--mv-accent2);
+            text-decoration: underline;
+            font-weight: 600;
+            word-break: break-all;
+        }
+
+        .modal-body a:hover {
+            color: var(--mv-accent);
         }
 
         /* Faixa de sub-header */
@@ -382,6 +526,11 @@
             background: var(--error-bg);
         }
 
+        .result-area.info {
+            border-color: #93c5fd;
+            background: #f8fafc;
+        }
+
         .res-header {
             padding: .75rem 1.2rem;
             font-size: .88rem;
@@ -405,6 +554,112 @@
         .error-header {
             color: var(--error-tx);
             background: rgba(239, 68, 68, .07);
+        }
+
+        .info-header {
+            color: #0369a1;
+            background: rgba(14, 165, 233, .08);
+        }
+
+        .metodo-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 3px 8px;
+            border-radius: 4px;
+            background: #e0f2fe;
+            color: #0369a1;
+            margin-bottom: 0.6rem;
+        }
+
+        .step-container {
+            display: flex;
+            flex-direction: column;
+            gap: .65rem;
+            margin: .75rem 0 .9rem;
+        }
+
+        .step-item {
+            display: flex;
+            align-items: flex-start;
+            gap: .75rem;
+            background: #fff;
+            padding: .75rem .9rem;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+            font-size: .84rem;
+            color: #334155;
+            line-height: 1.45;
+        }
+
+        .step-num {
+            background: var(--mv-accent);
+            color: #fff;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: .75rem;
+            font-weight: 700;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+
+        .btn-upload-action {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: .5rem;
+            width: 100%;
+            background: var(--mv-accent);
+            color: #fff;
+            padding: .75rem 1rem;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: .88rem;
+            cursor: pointer;
+            transition: all .2s;
+            box-shadow: 0 2px 6px rgba(42, 159, 214, 0.25);
+        }
+
+        .btn-upload-action:hover {
+            background: var(--mv-accent2);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 10px rgba(42, 159, 214, 0.35);
+        }
+
+        .drop-zone {
+            border: 2px dashed #cbd5e1;
+            border-radius: 6px;
+            padding: .85rem;
+            text-align: center;
+            color: var(--muted);
+            font-size: .8rem;
+            margin-top: .6rem;
+            cursor: pointer;
+            transition: all .2s;
+            background: #fff;
+        }
+
+        .drop-zone:hover {
+            border-color: var(--mv-accent);
+            background: #f0f9ff;
+            color: var(--mv-accent2);
+        }
+
+        .drop-zone.dragover {
+            border-color: var(--mv-accent);
+            background: #e0f2fe;
+            color: var(--mv-accent2);
+            transform: scale(1.01);
         }
 
         .res-section {
@@ -588,7 +843,28 @@
             <div class="header-divider"></div>
             <div class="header-module">Validador de Assinatura Eletrônica</div>
         </div>
-        <div class="header-right" id="header-clock"></div>
+        <div class="header-right">
+            <span id="header-clock" class="header-clock"></span>
+            <div class="header-divider-small"></div>
+            <div class="header-actions">
+                <button type="button" class="header-btn" id="btn-sobre" title="Sobre o software">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="16" x2="12" y2="12"></line>
+                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                    </svg>
+                    <span>Sobre</span>
+                </button>
+                <button type="button" class="header-btn" id="btn-ajuda" title="Ajuda e orientações">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                    </svg>
+                    <span>Ajuda</span>
+                </button>
+            </div>
+        </div>
     </header>
 
 
@@ -675,12 +951,12 @@
 
         <!-- ── Painel PDF (visível após validação) ── -->
         <div class="pdf-panel" id="pdf-panel">
-            <div class="pdf-panel-header">
+            <div class="pdf-panel-header" id="pdf-panel-header">
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                     <rect x="1" y="1" width="12" height="12" rx="2" stroke="white" stroke-width="1.4" />
                     <path d="M4 5h6M4 7.5h6M4 10h4" stroke="white" stroke-width="1.2" stroke-linecap="round" />
                 </svg>
-                Documento Original — Conferência de Integridade
+                <span id="pdf-panel-title">Documento Original — Conferência de Integridade</span>
             </div>
             <div class="pdf-loading" id="pdf-loading">
                 <div class="spinner"></div>
@@ -692,17 +968,76 @@
 
     <div class="app-footer">DTIS - Diretoria de Tecnologia da Informação em Saúde · validar.iti.gov.br</div>
 
+    <!-- ── Modal Popup (Sobre / Ajuda) ── -->
+    <div id="app-modal" class="modal-overlay hidden" role="dialog" aria-modal="true">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 id="modal-title" class="modal-title">Sobre</h3>
+                <button type="button" class="modal-close" id="modal-close-btn" aria-label="Fechar">✕</button>
+            </div>
+            <div class="modal-body" id="modal-body"></div>
+        </div>
+    </div>
+
     <script>
         // Relógio no header
         function tick() {
             const now = new Date();
-            document.getElementById('header-clock').textContent =
-                now.toLocaleDateString('pt-BR') + '  ' +
-                now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+            const clockEl = document.getElementById('header-clock');
+            if (clockEl) {
+                clockEl.textContent =
+                    now.toLocaleDateString('pt-BR') + '  ' +
+                    now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+            }
         }
         tick(); setInterval(tick, 30000);
+
+        // Modais de Sobre e Ajuda
+        const appModal = document.getElementById('app-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalBody = document.getElementById('modal-body');
+        const modalCloseBtn = document.getElementById('modal-close-btn');
+
+        function openModal(title, contentHtml) {
+            if (!appModal || !modalTitle || !modalBody) return;
+            modalTitle.textContent = title;
+            modalBody.innerHTML = contentHtml;
+            appModal.classList.remove('hidden');
+        }
+
+        function closeModal() {
+            if (appModal) appModal.classList.add('hidden');
+        }
+
+        document.getElementById('btn-sobre')?.addEventListener('click', () => {
+            openModal(
+                'Sobre',
+                '<div>Validador de Assinatura 1.0.1026 Copyright (C) 2026 DTIS</div>'
+            );
+        });
+
+        document.getElementById('btn-ajuda')?.addEventListener('click', () => {
+            openModal(
+                'Ajuda',
+                '<div>Caso o Validador DTIS apresente indisponibilidade,<br>use o <a href="https://validar.iti.gov.br/" target="_blank" rel="noopener noreferrer">https://validar.iti.gov.br/</a></div>'
+            );
+        });
+
+        modalCloseBtn?.addEventListener('click', closeModal);
+
+        appModal?.addEventListener('click', (e) => {
+            if (e.target === appModal) {
+                closeModal();
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && appModal && !appModal.classList.contains('hidden')) {
+                closeModal();
+            }
+        });
     </script>
-    <script src="script.js?v=3"></script>
+    <script src="script.js?v=4"></script>
 </body>
 
 </html>

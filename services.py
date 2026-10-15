@@ -24,11 +24,72 @@ def index():
     return send_from_directory('.', 'index.html')
 
 
+def detectar_tipo_documento(url):
+    """
+    Identifica de forma rápida se a URL aponta diretamente para um PDF (Método 1)
+    ou para uma página HTML externa (Método 2).
+    """
+    import urllib.parse
+    clean_path = urllib.parse.urlparse(url).path.lower()
+
+    # 1. Checagem rápida de extensão na URL (.pdf)
+    if clean_path.endswith('.pdf'):
+        return {'tipo': 'pdf', 'metodo': 1, 'detalhe': 'Extensão .pdf na URL'}
+
+    # 2. Requisição rápida para inspecionar Content-Type (HEAD com fallback para GET stream)
+    try:
+        session = requests.Session()
+        session.headers.update(BASE_HEADERS)
+        r = session.head(url, timeout=5, allow_redirects=True)
+        content_type = r.headers.get('Content-Type', '').lower()
+
+        # Se o servidor rejeitar HEAD (405, 501) ou não trouxer Content-Type
+        if r.status_code in (405, 501) or not content_type:
+            r = session.get(url, stream=True, timeout=5, allow_redirects=True)
+            content_type = r.headers.get('Content-Type', '').lower()
+
+        if 'application/pdf' in content_type:
+            return {'tipo': 'pdf', 'metodo': 1, 'contentType': content_type}
+        else:
+            return {'tipo': 'html', 'metodo': 2, 'contentType': content_type}
+
+    except Exception as e:
+        if clean_path.endswith('.pdf'):
+            return {'tipo': 'pdf', 'metodo': 1, 'detalhe': 'Fallback extensão'}
+        return {'tipo': 'html', 'metodo': 2, 'erro': str(e)}
+
+
+@app.route('/api/verificar-tipo-url', methods=['POST'])
+def verificar_tipo_url():
+    """Endpoint leve e rápido para direcionar ao Método 1 ou Método 2 antes do ITI."""
+    url_documento = request.form.get('urlDocumento', '').strip()
+    if not url_documento:
+        return jsonify({'error': 'URL não informada'}), 400
+
+    info = detectar_tipo_documento(url_documento)
+    return jsonify({
+        'sucesso': True,
+        'url': url_documento,
+        **info
+    }), 200
+
+
 @app.route('/api/validar-url', methods=['POST'])
 def validar_url():
     url_documento = request.form.get('urlDocumento')
     if not url_documento:
         return jsonify({'error': 'URL não informada'}), 400
+
+    # Lógica inversa de segurança: se a URL for página HTML, não sobrecarrega nem aguarda timeout do ITI
+    tipo_info = detectar_tipo_documento(url_documento)
+    if tipo_info.get('tipo') == 'html':
+        return jsonify({
+            'sucesso': False,
+            'isHtml': True,
+            'metodo': 2,
+            'error': 'A URL informada direciona para uma página HTML externa e não diretamente para um PDF.',
+            'dica': 'Baixe o documento PDF através da página exibida ao lado e faça o upload para validar a assinatura.'
+        }), 200
 
     try:
         # ── Passo 0: Cria sessão para obter cookies do portal ITI ──────────────
@@ -191,8 +252,10 @@ def pdf_proxy():
     """Busca o PDF da URL original e serve inline (sem forçar download)."""
     from flask import Response
     url_doc = request.args.get('url', '').strip()
-    if not url_doc:
-        return jsonify({'error': 'Parâmetro url ausente'}), 400
+    tipo = request.args.get('tipo', '').strip().lower()
+    if tipo == 'html':
+        from flask import redirect
+        return redirect(url_doc, code=302)
 
     try:
         session = requests.Session()

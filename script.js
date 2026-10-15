@@ -18,16 +18,16 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 loadingState.innerHTML = `<div class="spinner"></div> Consultando servidor do governo...`;
             }
-            
+
             try {
                 const response = await fetch(url, options);
-                
+
                 // Se o status for de sucesso ou um erro não retentável (ex: 400 Bad Request)
                 if (response.ok || (response.status !== 408 && response.status < 500)) {
                     const data = await response.json();
                     return { response, data };
                 }
-                
+
                 if (attempt === maxRetries) {
                     return { customError: "Os servidores estão ocupados, tente usar o ambiente do validar.iti diretamente." };
                 }
@@ -41,6 +41,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // ── Identifica se a URL já aponta diretamente para arquivo PDF ───────────
+    function isDirectPdfUrl(url) {
+        try {
+            const parsed = new URL(url);
+            return parsed.pathname.toLowerCase().endsWith('.pdf');
+        } catch (e) {
+            return /\.pdf($|\?|#)/i.test(url);
+        }
+    }
+
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         const urlValue = urlInput.value.trim();
@@ -51,48 +61,88 @@ document.addEventListener('DOMContentLoaded', () => {
         validateBtn.disabled = true;
 
         try {
-            const formData = new URLSearchParams();
-            formData.append('urlDocumento', urlValue);
+            let tipoDoc = null;
 
-            const result = await fetchWithRetry(`${window.location.origin}/api/validar-url`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: formData.toString()
-            });
+            // ── LÓGICA INVERSA: Determina primeiro se é PDF ou HTML/Página ───
+            if (isDirectPdfUrl(urlValue)) {
+                // PDF direto detectado pela URL
+                tipoDoc = 'pdf';
+            } else {
+                loadingState.innerHTML = `<div class="spinner"></div> Identificando tipo de documento...`;
 
-            if (result.customError) {
-                showError('Falha na validação', result.customError);
-                showPdf(urlValue);
-                return;
+                const formDataCheck = new URLSearchParams();
+                formDataCheck.append('urlDocumento', urlValue);
+
+                const checkResp = await fetch('/api/verificar-tipo-url', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: formDataCheck.toString()
+                });
+
+                if (checkResp.ok) {
+                    const checkData = await checkResp.json();
+                    tipoDoc = checkData.tipo || 'html';
+                } else {
+                    tipoDoc = 'html';
+                }
             }
 
-            const response = result.response;
-            const data = result.data;
-
-            if (response.ok && data.sucesso) {
-                showResult(data);
-                showPdf(urlValue);
+            // ── DIRECIONAMENTO DO MÉTODO ─────────────────────────────────────
+            if (tipoDoc === 'html') {
+                // ════════════════════════════════════════════════════════════════
+                // MÉTODO 2: Página HTML externa (ex: Memed, CFM, etc.)
+                // NÃO consulta o ITI desnecessariamente. Abre o frame imediatamente
+                // para que o usuário baixe o PDF e anexe na tela de upload.
+                // ════════════════════════════════════════════════════════════════
+                showMetodo2(urlValue);
+                showPdf(urlValue, 'html');
             } else {
-                showError(data.error || 'Erro desconhecido.', data.dica || '');
-                showPdf(urlValue); // Mostra o HTML/Iframe de qualquer jeito para o usuário baixar o PDF
-                
-                // Adiciona botão para validar por arquivo localmente
-                resultText.innerHTML += `
-                    <div style="margin-top: 15px; text-align: center;">
-                        <button type="button" onclick="document.getElementById('fileUpload').click()" style="display: inline-block; background: #2a9fd6; color: #fff; padding: 10px 15px; text-decoration: none; border: none; border-radius: 6px; font-weight: 600; font-size: 0.85rem; cursor: pointer;">Validar documento por upload de arquivo</button>
-                    </div>
-                `;
+                // ════════════════════════════════════════════════════════════════
+                // MÉTODO 1: Documento já é um PDF direto
+                // Consulta o servidor do governo (ITI) para validação
+                // ════════════════════════════════════════════════════════════════
+                loadingState.innerHTML = `<div class="spinner"></div> Documento PDF identificado (Método 1). Consultando servidor do governo...`;
+
+                const formData = new URLSearchParams();
+                formData.append('urlDocumento', urlValue);
+
+                const result = await fetchWithRetry(`${window.location.origin}/api/validar-url`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: formData.toString()
+                });
+
+                if (result.customError) {
+                    showError('Falha na validação', result.customError);
+                    showPdf(urlValue, 'pdf');
+                    adicionarBotaoUploadManual();
+                    return;
+                }
+
+                const response = result.response;
+                const data = result.data;
+
+                // Caso o backend avise que na verdade a resposta foi HTML
+                if (data && data.isHtml) {
+                    showMetodo2(urlValue);
+                    showPdf(urlValue, 'html');
+                    return;
+                }
+
+                if (response && response.ok && data.sucesso) {
+                    showResult(data);
+                    showPdf(urlValue, 'pdf');
+                } else {
+                    showError(data?.error || 'Erro desconhecido.', data?.dica || '');
+                    showPdf(urlValue, 'pdf');
+                    adicionarBotaoUploadManual();
+                }
             }
         } catch (err) {
-            showError('Não foi possível obter resposta da validação.', 'Verifique se a URL do documento é válida, acessível e se o servidor local e o portal do ITI estão respondendo.');
-            showPdf(urlValue); // Mostra o iframe também em caso de falha de rede
-            
-            resultText.innerHTML += `
-                <div style="margin-top: 15px; text-align: center;">
-                    <button type="button" onclick="document.getElementById('fileUpload').click()" style="display: inline-block; background: #2a9fd6; color: #fff; padding: 10px 15px; text-decoration: none; border: none; border-radius: 6px; font-weight: 600; font-size: 0.85rem; cursor: pointer;">Validar documento por upload de arquivo</button>
-                </div>
-            `;
             console.error(err);
+            // Em caso de erro na checagem ou rede, abre no frame e permite upload manual
+            showMetodo2(urlValue);
+            showPdf(urlValue, 'html');
         } finally {
             loadingState.classList.add('hidden');
             validateBtn.disabled = false;
@@ -229,24 +279,24 @@ document.addEventListener('DOMContentLoaded', () => {
             const b0 = Array.isArray(bruto) ? bruto[0] : bruto;
             const sigs = b0?.verifierReport?.signatures?.signature;
             if (!sigs) return false;
-            
+
             const sigRaw = Array.isArray(sigs) ? sigs[idx] : sigs;
             if (!sigRaw) return false;
-            
+
             const signer = sigRaw?.certification?.signer;
             if (!signer) return false;
-            
+
             const certs = signer?.certificates?.certificate;
             const cert0 = Array.isArray(certs) ? certs[0] : certs;
             if (!cert0) return false;
-            
+
             const subjectName = cert0.subjectName || '';
             const isICP = subjectName.includes('O=ICP-Brasil');
             const isValidPath = signer?.certPathValidity?.result === 'SUCCESS';
             const isValidSig = cert0.validSignature === true;
-            
+
             return isICP && isValidPath && isValidSig;
-        } catch(e) {
+        } catch (e) {
             return false;
         }
     }
@@ -297,16 +347,24 @@ document.addEventListener('DOMContentLoaded', () => {
         return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
-    // ── Exibe o PDF original no painel lateral ───────────────────────────────
-    function showPdf(url) {
+    const pdfPanelTitle = document.getElementById('pdf-panel-title');
+
+    // ── Exibe o PDF ou página externa no painel lateral ─────────────────────
+    function showPdf(url, tipo = '') {
         mainEl.classList.add('split-view');
         pdfPanel.classList.add('visible');
+
+        if (pdfPanelTitle) {
+            pdfPanelTitle.textContent = (tipo === 'html')
+                ? 'Página Externa do Prestador — Baixe o PDF para Validar'
+                : 'Documento Original — Conferência de Integridade';
+        }
 
         pdfLoading.style.display = 'flex';
         pdfFrame.style.display = 'none';
         pdfFrame.src = '';
 
-        const proxyUrl = `${window.location.origin}/api/pdf-proxy?url=${encodeURIComponent(url)}`;
+        const proxyUrl = `${window.location.origin}/api/pdf-proxy?url=${encodeURIComponent(url)}${tipo ? `&tipo=${tipo}` : ''}`;
         pdfFrame.src = proxyUrl;
 
         pdfFrame.onload = () => {
@@ -318,68 +376,182 @@ document.addEventListener('DOMContentLoaded', () => {
             pdfLoading.innerHTML = '<p style="color:#9b1c1c;text-align:center;font-size:.85rem;">Não foi possível exibir o documento.<br>Verifique se a URL é acessível.</p>';
         };
     }
-    
+
     // ── Exibe o PDF através de um arquivo local ───────────────────────────────
     function showPdfFile(file) {
-        // Apenas renderiza se for um PDF
-        if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
-            mainEl.classList.remove('split-view');
-            pdfPanel.classList.remove('visible');
+        if (!file || (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf'))) {
             return;
         }
-        
+
         mainEl.classList.add('split-view');
         pdfPanel.classList.add('visible');
-        
+
+        if (pdfPanelTitle) {
+            pdfPanelTitle.textContent = `Documento Local: ${file.name} — Conferência de Integridade`;
+        }
+
         pdfLoading.style.display = 'none';
         pdfFrame.style.display = 'block';
-        
+
         const objectUrl = URL.createObjectURL(file);
         pdfFrame.src = objectUrl;
     }
 
-    // ── Lógica para Validação por Upload de Arquivo ─────────────────────────
+    // ── Interface do MÉTODO 2: Página Externa Detectada ───────────────────────
+    function showMetodo2(url) {
+        resultArea.className = 'result-area info';
+        resultArea.classList.remove('hidden');
+
+        resultText.innerHTML = `
+            <div class="info-header">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+                <span>Prestador Externa Detectado</span>
+            </div>
+            <div class="res-section">
+                <div class="metodo-badge">Validação por Arquivo Anexo</div>
+                <p style="font-size: 0.84rem; color: #475569; margin-bottom: 0.75rem; line-height: 1.45;">
+                    Esta URL aponta para um <strong>portal externo</strong> (receita/documento web). Para que a assinatura com certificado ICP-Brasil / GOV.BR seja atestada pelo ITI, siga o procedimento:
+                </p>
+                <div class="step-container">
+                    <div class="step-item">
+                        <span class="step-num">1</span>
+                        <div>
+                            <strong style="color: #1e293b;">Baixar o documento PDF:</strong>
+                            <div style="font-size: 0.8rem; color: #64748b; margin-top: 2px;">
+                                Na página aberta no painel ao lado, localize e clique no botão para <em>baixar a receita ou documento</em> em PDF.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="step-item">
+                        <span class="step-num">2</span>
+                        <div>
+                            <strong style="color: #1e293b;">Anexar para validação no ITI:</strong>
+                            <div style="font-size: 0.8rem; color: #64748b; margin-top: 2px;">
+                                Com o arquivo PDF salvo em seu computador, clique no botão abaixo para anexá-lo e validar.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="button" class="btn-upload-action" id="btnUploadMetodo2" onclick="document.getElementById('fileUpload').click()">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                    Validar documento por upload de arquivo
+                </button>
+
+                <div class="drop-zone" id="dropZoneMetodo2" onclick="document.getElementById('fileUpload').click()">
+                    <span>📁 Ou arraste o PDF baixado diretamente para cá</span>
+                </div>
+            </div>
+        `;
+
+        setupDropZone();
+        resultArea.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    // ── Botão de contingência para upload manual ─────────────────────────────
+    function adicionarBotaoUploadManual() {
+        if (!document.getElementById('btnUploadFallback')) {
+            const div = document.createElement('div');
+            div.style.cssText = 'margin-top: 15px; text-align: center;';
+            div.innerHTML = `
+                <button type="button" id="btnUploadFallback" onclick="document.getElementById('fileUpload').click()" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: #2a9fd6; color: #fff; padding: 10px 18px; border: none; border-radius: 6px; font-weight: 600; font-size: 0.85rem; cursor: pointer; transition: background 0.2s;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    Validar documento por upload de arquivo
+                </button>
+            `;
+            resultText.appendChild(div);
+        }
+    }
+
+    // ── Configuração da área de Drag & Drop para o PDF baixado ───────────────
+    function setupDropZone() {
+        const dropZone = document.getElementById('dropZoneMetodo2');
+        if (!dropZone) return;
+
+        ['dragenter', 'dragover'].forEach(name => {
+            dropZone.addEventListener(name, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                dropZone.classList.add('dragover');
+            });
+        });
+
+        ['dragleave', 'drop'].forEach(name => {
+            dropZone.addEventListener(name, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                dropZone.classList.remove('dragover');
+            });
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            const files = e.dataTransfer && e.dataTransfer.files;
+            if (files && files.length > 0) {
+                handleFileUpload(files[0]);
+            }
+        });
+    }
+
+    // ── Lógica Centralizada para Validação por Arquivo Local (Upload) ────────
+    async function handleFileUpload(file) {
+        if (!file) return;
+
+        // Reset UI
+        resultArea.classList.add('hidden');
+        resultArea.className = 'result-area hidden';
+        loadingState.classList.remove('hidden');
+        loadingState.innerHTML = `<div class="spinner"></div> Enviando arquivo para o servidor do governo (ITI)...`;
+        validateBtn.disabled = true;
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const result = await fetchWithRetry('/api/validar-arquivo', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (result.customError) {
+                showError('Falha na validação', result.customError);
+                adicionarBotaoUploadManual();
+                return;
+            }
+
+            const response = result.response;
+            const data = result.data;
+            if (response && response.ok && data.sucesso) {
+                showResult(data);
+                showPdfFile(file); // Mostra o PDF do arquivo local no iframe
+            } else {
+                showError(data?.error || 'Erro desconhecido ao validar arquivo.', '');
+                adicionarBotaoUploadManual();
+            }
+        } catch (err) {
+            showError('Falha ao enviar arquivo para validação.', 'Verifique a conexão com o servidor.');
+            adicionarBotaoUploadManual();
+            console.error(err);
+        } finally {
+            loadingState.classList.add('hidden');
+            validateBtn.disabled = false;
+            if (fileUpload) fileUpload.value = ''; // reseta o input
+        }
+    }
+
     const fileUpload = document.getElementById('fileUpload');
     if (fileUpload) {
-        fileUpload.addEventListener('change', async (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-
-            // Reset UI
-            resultArea.classList.add('hidden');
-            resultArea.classList.remove('error');
-            loadingState.classList.remove('hidden');
-            mainEl.classList.remove('split-view');
-            pdfPanel.classList.remove('visible');
-
-            const formData = new FormData();
-            formData.append('file', file);
-
-            try {
-                const result = await fetchWithRetry('/api/validar-arquivo', {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                if (result.customError) {
-                    showError('Falha na validação', result.customError);
-                    return;
-                }
-
-                const response = result.response;
-                const data = result.data;
-                if (response.ok && data.sucesso) {
-                    showResult(data);
-                    showPdfFile(file); // Mostra o PDF do arquivo local no iframe
-                } else {
-                    showError(data.error || 'Erro desconhecido ao validar arquivo.', '');
-                }
-            } catch (err) {
-                showError('Falha ao enviar arquivo para validação.', 'Verifique a conexão com o servidor.');
-                console.error(err);
-            } finally {
-                loadingState.classList.add('hidden');
-                fileUpload.value = ''; // reseta o input
+        fileUpload.addEventListener('change', (e) => {
+            const file = e.target.files && e.target.files[0];
+            if (file) {
+                handleFileUpload(file);
             }
         });
     }
