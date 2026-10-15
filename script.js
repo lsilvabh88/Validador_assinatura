@@ -58,91 +58,56 @@ document.addEventListener('DOMContentLoaded', () => {
 
         resultArea.className = 'result-area hidden';
         loadingState.classList.remove('hidden');
+        loadingState.innerHTML = `<div class="spinner"></div> Analisando documento e validando no servidor do governo...`;
         validateBtn.disabled = true;
 
         try {
-            let tipoDoc = null;
+            const formData = new URLSearchParams();
+            formData.append('urlDocumento', urlValue);
 
-            // ── LÓGICA INVERSA: Determina primeiro se é PDF ou HTML/Página ───
-            if (isDirectPdfUrl(urlValue)) {
-                // PDF direto detectado pela URL
-                tipoDoc = 'pdf';
-            } else {
-                loadingState.innerHTML = `<div class="spinner"></div> Identificando tipo de documento...`;
+            const result = await fetchWithRetry(`${window.location.origin}/api/validar-url`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: formData.toString()
+            });
 
-                const formDataCheck = new URLSearchParams();
-                formDataCheck.append('urlDocumento', urlValue);
-
-                const checkResp = await fetch('/api/verificar-tipo-url', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: formDataCheck.toString()
-                });
-
-                if (checkResp.ok) {
-                    const checkData = await checkResp.json();
-                    tipoDoc = checkData.tipo || 'html';
-                } else {
-                    tipoDoc = 'html';
-                }
+            if (result.customError) {
+                showError('Falha na validação', result.customError);
+                showPdf(urlValue, 'pdf');
+                adicionarBotaoUploadManual();
+                return;
             }
 
-            // ── DIRECIONAMENTO DO MÉTODO ─────────────────────────────────────
-            if (tipoDoc === 'html') {
-                // ════════════════════════════════════════════════════════════════
-                // MÉTODO 2: Página HTML externa (ex: Memed, CFM, etc.)
-                // NÃO consulta o ITI desnecessariamente. Abre o frame imediatamente
-                // para que o usuário baixe o PDF e anexe na tela de upload.
-                // ════════════════════════════════════════════════════════════════
+            const response = result.response;
+            const data = result.data;
+
+            // ════════════════════════════════════════════════════════════════
+            // MÉTODO 2: Página HTML externa (portal de prestador externo)
+            // Abre o frame para que o usuário baixe o PDF e anexe na tela de upload.
+            // ════════════════════════════════════════════════════════════════
+            if (data && data.isHtml) {
                 showMetodo2(urlValue);
                 showPdf(urlValue, 'html');
+                return;
+            }
+
+            // ════════════════════════════════════════════════════════════════
+            // MÉTODO 1: URL com download automático de PDF
+            // Validação direta e transparente sem necessidade de upload de arquivo!
+            // ════════════════════════════════════════════════════════════════
+            if (response && response.ok && data.sucesso) {
+                showResult(data);
+                showPdf(urlValue, 'pdf');
             } else {
-                // ════════════════════════════════════════════════════════════════
-                // MÉTODO 1: Documento já é um PDF direto
-                // Consulta o servidor do governo (ITI) para validação
-                // ════════════════════════════════════════════════════════════════
-                loadingState.innerHTML = `<div class="spinner"></div> Documento PDF identificado (Método 1). Consultando servidor do governo...`;
-
-                const formData = new URLSearchParams();
-                formData.append('urlDocumento', urlValue);
-
-                const result = await fetchWithRetry(`${window.location.origin}/api/validar-url`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: formData.toString()
-                });
-
-                if (result.customError) {
-                    showError('Falha na validação', result.customError);
-                    showPdf(urlValue, 'pdf');
-                    adicionarBotaoUploadManual();
-                    return;
-                }
-
-                const response = result.response;
-                const data = result.data;
-
-                // Caso o backend avise que na verdade a resposta foi HTML
-                if (data && data.isHtml) {
-                    showMetodo2(urlValue);
-                    showPdf(urlValue, 'html');
-                    return;
-                }
-
-                if (response && response.ok && data.sucesso) {
-                    showResult(data);
-                    showPdf(urlValue, 'pdf');
-                } else {
-                    showError(data?.error || 'Erro desconhecido.', data?.dica || '');
-                    showPdf(urlValue, 'pdf');
-                    adicionarBotaoUploadManual();
-                }
+                showError(data?.error || 'Erro desconhecido na validação.', data?.dica || '');
+                showPdf(urlValue, 'pdf');
+                adicionarBotaoUploadManual();
             }
         } catch (err) {
             console.error(err);
-            // Em caso de erro na checagem ou rede, abre no frame e permite upload manual
-            showMetodo2(urlValue);
-            showPdf(urlValue, 'html');
+            showError('Não foi possível obter resposta da validação.', 'Verifique se a URL do documento é acessível.');
+            showPdf(urlValue);
+            adicionarBotaoUploadManual();
         } finally {
             loadingState.classList.add('hidden');
             validateBtn.disabled = false;

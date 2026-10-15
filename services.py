@@ -25,65 +25,116 @@ def index():
     return send_from_directory('.', 'index.html')
 
 
-def detectar_tipo_documento(url):
-    """
-    Identifica de forma rápida se a URL aponta diretamente para um PDF (Método 1)
-    ou para uma página HTML externa (Método 2).
-    """
-    import urllib.parse
-    clean_path = urllib.parse.urlparse(url).path.lower()
+PDF_CACHE = {}  # url -> (bytes, filename)
 
-    # 1. Checagem rápida de extensão na URL (.pdf)
-    if clean_path.endswith('.pdf'):
-        return {'tipo': 'pdf', 'metodo': 1, 'detalhe': 'Extensão .pdf na URL'}
 
-    # 2. Requisição rápida para inspecionar Content-Type (HEAD com fallback para GET stream)
+def extrair_nome_arquivo(resp, url):
+    """Extrai o nome do arquivo a partir de Content-Disposition ou da URL."""
+    cd = resp.headers.get('Content-Disposition', '')
+    if 'filename=' in cd:
+        import re
+        m = re.search(r'filename=["\']?([^"\';]+)["\']?', cd, re.IGNORECASE)
+        if m:
+            return m.group(1).strip()
+    from urllib.parse import urlparse
+    import os
+    path = urlparse(url).path
+    base = os.path.basename(path)
+    if base and '.' in base:
+        return base
+    return 'documento.pdf'
+
+
+def inspecionar_e_baixar_documento(url):
+    """
+    Inspeciona a URL fornecida:
+    - Se for página HTML (portal externo, ex: Memed), identifica como Método 2.
+    - Se for PDF (direto ou download automático, ex: Green Sem Papel, SoulMV PBH),
+      baixa o PDF em memória para validação transparente imediata no ITI via /arquivo.
+    """
+    session = requests.Session()
+    session.headers.update(BASE_HEADERS)
+
+    # Faz GET com stream=True para checar cabeçalhos
     try:
-        session = requests.Session()
-        session.headers.update(BASE_HEADERS)
-        r = session.head(url, timeout=5, allow_redirects=True)
-        content_type = r.headers.get('Content-Type', '').lower()
+        r = session.get(url, stream=True, timeout=30, allow_redirects=True)
+    except requests.exceptions.SSLError:
+        r = session.get(url, stream=True, timeout=30, allow_redirects=True, verify=False)
 
-        # Se o servidor rejeitar HEAD (405, 501) ou não trouxer Content-Type
-        if r.status_code in (405, 501) or not content_type:
-            r = session.get(url, stream=True, timeout=5, allow_redirects=True)
-            content_type = r.headers.get('Content-Type', '').lower()
+    ct = r.headers.get('Content-Type', '').lower()
+    cd = r.headers.get('Content-Disposition', '').lower()
 
-        if 'application/pdf' in content_type:
-            return {'tipo': 'pdf', 'metodo': 1, 'contentType': content_type}
-        else:
-            return {'tipo': 'html', 'metodo': 2, 'contentType': content_type}
+    # Se for expressamente uma página HTML e não indicar arquivo PDF em anexo
+    if 'text/html' in ct and not ('.pdf' in cd or 'application/pdf' in ct):
+        r.close()
+        return {'tipo': 'html', 'metodo': 2, 'contentType': ct}
 
-    except Exception as e:
-        if clean_path.endswith('.pdf'):
-            return {'tipo': 'pdf', 'metodo': 1, 'detalhe': 'Fallback extensão'}
-        return {'tipo': 'html', 'metodo': 2, 'erro': str(e)}
+    # Lê os chunks para validar o conteúdo
+    chunks = []
+    total_len = 0
+    for chunk in r.iter_content(chunk_size=8192):
+        if chunk:
+            chunks.append(chunk)
+            total_len += len(chunk)
+            if total_len > 50 * 1024 * 1024:  # Limite de segurança: 50MB
+                break
+
+    total_bytes = b''.join(chunks)
+
+    is_pdf = ('application/pdf' in ct) or ('.pdf' in cd) or (b'%PDF-' in total_bytes[:1024])
+
+    if is_pdf:
+        filename = extrair_nome_arquivo(r, url)
+        if len(PDF_CACHE) > 50:
+            PDF_CACHE.clear()
+        PDF_CACHE[url] = (total_bytes, filename)
+        return {
+            'tipo': 'pdf',
+            'metodo': 1,
+            'content': total_bytes,
+            'filename': filename,
+            'contentType': 'application/pdf'
+        }
+    else:
+        return {'tipo': 'html', 'metodo': 2, 'contentType': ct}
 
 
 @app.route('/api/verificar-tipo-url', methods=['POST'])
 def verificar_tipo_url():
-    """Endpoint leve e rápido para direcionar ao Método 1 ou Método 2 antes do ITI."""
+    """Endpoint rápido para direcionar ao Método 1 ou Método 2 antes do ITI."""
     url_documento = request.form.get('urlDocumento', '').strip()
     if not url_documento:
         return jsonify({'error': 'URL não informada'}), 400
 
-    info = detectar_tipo_documento(url_documento)
+    info = inspecionar_e_baixar_documento(url_documento)
     return jsonify({
         'sucesso': True,
         'url': url_documento,
-        **info
+        'tipo': info.get('tipo'),
+        'metodo': info.get('metodo'),
+        'contentType': info.get('contentType')
     }), 200
 
 
 @app.route('/api/validar-url', methods=['POST'])
 def validar_url():
-    url_documento = request.form.get('urlDocumento')
+    url_documento = request.form.get('urlDocumento', '').strip()
     if not url_documento:
         return jsonify({'error': 'URL não informada'}), 400
 
-    # Lógica inversa de segurança: se a URL for página HTML, não sobrecarrega nem aguarda timeout do ITI
-    tipo_info = detectar_tipo_documento(url_documento)
-    if tipo_info.get('tipo') == 'html':
+    try:
+        doc_info = inspecionar_e_baixar_documento(url_documento)
+    except Exception as e:
+        app.logger.error(f"Erro ao acessar URL do documento: {e}")
+        return jsonify({
+            'error': f'Não foi possível acessar a URL informada: {str(e)}',
+            'dica': 'Certifique-se de que o endereço é válido e acessível.'
+        }), 400
+
+    # ════════════════════════════════════════════════════════════════
+    # MÉTODO 2: Página HTML externa (portal de prestador)
+    # ════════════════════════════════════════════════════════════════
+    if doc_info.get('tipo') == 'html':
         return jsonify({
             'sucesso': False,
             'isHtml': True,
@@ -92,72 +143,63 @@ def validar_url():
             'dica': 'Baixe o documento PDF através da página exibida ao lado e faça o upload para validar a assinatura.'
         }), 200
 
+    # ════════════════════════════════════════════════════════════════
+    # MÉTODO 1: URL com download automático de PDF (ex: Green, SoulMV, etc.)
+    # Baixa e envia os bytes para o endpoint /arquivo do ITI de forma transparente!
+    # ════════════════════════════════════════════════════════════════
+    pdf_bytes = doc_info['content']
+    filename = doc_info.get('filename', 'documento.pdf')
+
     try:
-        # ── Passo 0: Cria sessão para obter cookies do portal ITI ──────────────
         session = requests.Session()
         session.headers.update(BASE_HEADERS)
-
-        # Faz GET na página principal para pegar cookies de sessão (necessário para o ITI aceitar a requisição)
         session.get(ITI_BASE, timeout=15)
 
-        # ── Passo 1: Envia a URL para o endpoint /url do ITI ──────────────────
-        headers_json = {**BASE_HEADERS,
-            'Content-Type': 'application/json',
-            'Accept': 'application/json, text/plain, */*',
+        files = {
+            'signature_files[]': (filename, pdf_bytes, 'application/pdf')
         }
 
         r1 = session.post(
-            ITI_VALIDAR_URL,
-            headers=headers_json,
-            json={'url': url_documento},
+            ITI_BASE + 'arquivo',
+            files=files,
             timeout=ITI_TIMEOUT
         )
 
-        app.logger.info(f"ITI /url status: {r1.status_code}, body: {r1.text[:300]}")
-
-        # Trata erros HTTP conhecidos do ITI
-        if r1.status_code == 415:
-            return jsonify({'error': 'Não foi possível baixar o arquivo da URL fornecida. Verifique se a URL aponta diretamente para um PDF assinado.'}), 415
         if r1.status_code == 400:
             return jsonify({'error': 'Documento sem assinatura reconhecível ou com assinatura corrompida.'}), 400
-        if r1.status_code == 422:
-            return jsonify({'error': 'Documento inválido.'}), 422
-        if r1.status_code == 500:
-            return jsonify({
-                'error': 'O servidor do ITI retornou erro interno (500). Possíveis causas: URL do documento inacessível ao servidor do governo, documento expirado ou formato não suportado.',
-                'dica': 'Certifique-se de que a URL do documento está acessível publicamente na internet.'
-            }), 500
-        if not r1.ok:
-            return jsonify({'error': f'Servidor ITI retornou erro: {r1.status_code}', 'details': r1.text[:300]}), r1.status_code
+        if r1.status_code != 200:
+            return jsonify({'error': f'O servidor do ITI retornou erro {r1.status_code} ao processar o arquivo.'}), r1.status_code
 
-        json_bruto = r1.json()
-        print("\n" + "="*60)
-        print("JSON BRUTO do ITI (/url):")
-        print(json.dumps(json_bruto, indent=2, ensure_ascii=False)[:5000])
-        print("="*60 + "\n")
+        bruto_json = r1.json()
 
-        # ── Passo 2: Envia JSON bruto para /simples para obter relatório tratado ──
-        r2 = session.post(
-            ITI_REL_SIMPLES,
-            headers=headers_json,
-            json=json_bruto,
-            timeout=ITI_TIMEOUT
-        )
+        headers_json = {
+            **BASE_HEADERS,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json, text/plain, */*'
+        }
+        r2 = session.post(ITI_REL_SIMPLES, headers=headers_json, json=bruto_json, timeout=ITI_TIMEOUT)
 
-        app.logger.info(f"ITI /simples status: {r2.status_code}")
-
-        if r2.ok:
-            json_tratado = r2.json()
+        if r2.status_code == 200:
             return jsonify({
                 'sucesso': True,
-                'bruto': json_bruto,
-                'tratado': json_tratado
+                'metodo': 1,
+                'tipo': 'pdf',
+                'bruto': bruto_json,
+                'tratado': r2.json()
             }), 200
         else:
-            # Retorna pelo menos o bruto se /simples falhar
-            return jsonify({'sucesso': True, 'bruto': json_bruto, 'tratado': None}), 200
+            return jsonify({
+                'sucesso': True,
+                'metodo': 1,
+                'tipo': 'pdf',
+                'bruto': bruto_json,
+                'tratado': None
+            }), 200
 
-    except requests.exceptions.ConnectionError:
+    except requests.exceptions.Timeout:
+        return jsonify({'error': 'Tempo de resposta excedido ao consultar o portal ITI (timeout).'}), 408
+    except Exception as e:
+        return jsonify({'error': f'Erro ao validar no servidor do ITI: {str(e)}'}), 500
         return jsonify({'error': 'Sem conexão com o servidor do ITI. Verifique sua internet.'}), 503
     except requests.exceptions.Timeout:
         return jsonify({'error': 'O servidor do ITI demorou demais para responder. Tente novamente.'}), 408
@@ -253,21 +295,34 @@ def pdf_proxy():
     """Busca o PDF da URL original e serve inline (sem forçar download)."""
     from flask import Response
     url_doc = request.args.get('url', '').strip()
+    if not url_doc:
+        return jsonify({'error': 'Parâmetro url ausente'}), 400
+
     tipo = request.args.get('tipo', '').strip().lower()
     if tipo == 'html':
         from flask import redirect
         return redirect(url_doc, code=302)
 
+    # 1. Se o PDF já foi baixado em memória durante a validação transparente, serve de imediato!
+    if url_doc in PDF_CACHE:
+        cached_content, cached_filename = PDF_CACHE[url_doc]
+        response = Response(cached_content, status=200, content_type='application/pdf')
+        response.headers['Content-Disposition'] = f'inline; filename="{cached_filename}"'
+        return response
+
     try:
         session = requests.Session()
         session.headers.update(BASE_HEADERS)
-        r = session.get(url_doc, timeout=30, stream=True)
+        try:
+            r = session.get(url_doc, timeout=30, stream=True)
+        except requests.exceptions.SSLError:
+            r = session.get(url_doc, timeout=30, stream=True, verify=False)
 
         content_type = r.headers.get('Content-Type', '')
         if 'html' in content_type.lower():
             from flask import redirect
             return redirect(url_doc, code=302)
-            
+
         if 'pdf' not in content_type.lower() and 'image' not in content_type.lower():
             content_type = 'application/pdf'
 
