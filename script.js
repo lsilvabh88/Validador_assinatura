@@ -85,8 +85,23 @@ document.addEventListener('DOMContentLoaded', () => {
             // URL QUEBRADA OU PORTAL DO PRESTADOR INDISPONÍVEL
             // Trata graciosamente links fora do ar ou quebrados (ex: assistant.memed.com.br)
             // ════════════════════════════════════════════════════════════════
-            if (data && data.urlIndisponivel) {
-                showUrlIndisponivel(data, urlValue);
+            const erroMsg = (data?.error || result?.customError || '').toString().toLowerCase();
+            const isFalhaConexaoUrl = Boolean(
+                data?.urlIndisponivel ||
+                erroMsg.includes('não foi possível acessar a url') ||
+                erroMsg.includes('nao foi possivel acessar a url') ||
+                erroMsg.includes('nameresolutionerror') ||
+                erroMsg.includes('connectionpool') ||
+                erroMsg.includes('name or service not known') ||
+                erroMsg.includes('getaddrinfo') ||
+                erroMsg.includes('failed to resolve') ||
+                erroMsg.includes('max retries exceeded') ||
+                erroMsg.includes('errno -2') ||
+                erroMsg.includes('errno 11001')
+            );
+
+            if (isFalhaConexaoUrl) {
+                showUrlIndisponivel(data || {}, urlValue);
                 return;
             }
 
@@ -443,7 +458,26 @@ document.addEventListener('DOMContentLoaded', () => {
         resultArea.classList.remove('hidden');
 
         const titulo = data.titulo || 'Portal Externo Indisponível ou Endereço Incorreto';
-        const motivo = data.error || 'Não foi possível estabelecer comunicação com o endereço fornecido.';
+        let motivo = data.error || 'Não foi possível estabelecer comunicação com o endereço fornecido.';
+
+        // Higieniza caso venha traceback bruto do Python (ex: HTTPSConnectionPool ou NameResolutionError)
+        const motivoLow = String(motivo).toLowerCase();
+        if (
+            motivoLow.includes('connectionpool') ||
+            motivoLow.includes('nameresolutionerror') ||
+            motivoLow.includes('name or service not known') ||
+            motivoLow.includes('failed to resolve') ||
+            motivoLow.includes('não foi possível acessar a url') ||
+            motivoLow.includes('getaddrinfo')
+        ) {
+            try {
+                const host = new URL(url).host;
+                motivo = `Não foi possível localizar o servidor de "${host}". O portal externo do prestador pode estar fora do ar ou o endereço informado está incorreto.`;
+            } catch (e) {
+                motivo = 'Não foi possível localizar o servidor do prestador externo. O portal pode estar fora do ar ou o endereço informado está incorreto.';
+            }
+        }
+
         const dica = data.dica || 'Certifique-se de que a URL e o endereço estão corretos ou se o Portal Externo do Prestador está apresentando indisponibilidade.';
 
         resultText.innerHTML = `

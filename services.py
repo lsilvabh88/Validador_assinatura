@@ -88,7 +88,15 @@ def classificar_erro_requisicao(url, exc=None, status_code=None):
 
     if exc:
         exc_str = str(exc).lower()
-        if 'nameresolutionerror' in exc_str or 'getaddrinfo failed' in exc_str or 'errno 11001' in exc_str:
+        if (
+            'nameresolutionerror' in exc_str
+            or 'getaddrinfo failed' in exc_str
+            or 'errno 11001' in exc_str
+            or 'name or service not known' in exc_str
+            or 'errno -2' in exc_str
+            or 'failed to resolve' in exc_str
+            or isinstance(exc, requests.exceptions.ConnectionError)
+        ):
             return {
                 'tipo': 'indisponivel',
                 'urlIndisponivel': True,
