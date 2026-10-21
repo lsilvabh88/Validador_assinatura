@@ -663,6 +663,122 @@
             transform: scale(1.01);
         }
 
+        .url-error-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 3px 8px;
+            border-radius: 4px;
+            background: #fef3c7;
+            color: #92400e;
+            border: 1px solid #fde68a;
+            margin-bottom: 0.6rem;
+        }
+
+        .url-box {
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-left: 4px solid #f59e0b;
+            border-radius: 6px;
+            padding: 0.6rem 0.85rem;
+            margin: 0.6rem 0 0.85rem 0;
+            font-size: 0.8rem;
+            color: #1e293b;
+            word-break: break-all;
+        }
+
+        .url-box code {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            color: #0f172a;
+            font-weight: 600;
+        }
+
+        .action-card-container {
+            display: flex;
+            flex-direction: column;
+            gap: 0.65rem;
+            margin-top: 0.75rem;
+        }
+
+        .action-card {
+            background: #fff;
+            padding: 0.75rem 0.9rem;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+            font-size: 0.84rem;
+            color: #334155;
+            line-height: 1.45;
+        }
+
+        .action-card-title {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: #1e293b;
+            margin-bottom: 0.35rem;
+        }
+
+        .action-num {
+            background: #f59e0b;
+            color: #fff;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.72rem;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .action-card-text {
+            font-size: 0.82rem;
+            color: #475569;
+            line-height: 1.45;
+        }
+
+        .btn-action-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: #0284c7;
+            background: #f0f9ff;
+            border: 1px solid #bae6fd;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-decoration: none;
+            margin-top: 0.5rem;
+            transition: all 0.2s;
+        }
+
+        .btn-action-link:hover {
+            background: #e0f2fe;
+            color: #0369a1;
+            border-color: #7dd3fc;
+        }
+
+        .btn-action-link.btn-iti {
+            background: #f0fdf4;
+            color: #15803d;
+            border-color: #bbf7d0;
+        }
+
+        .btn-action-link.btn-iti:hover {
+            background: #dcfce7;
+            color: #166534;
+            border-color: #86efac;
+        }
+
         .res-section {
             padding: 1rem 1.2rem;
             border-bottom: 1px solid rgba(0, 0, 0, .05);
@@ -1015,7 +1131,7 @@
         document.getElementById('btn-sobre')?.addEventListener('click', () => {
             openModal(
                 'Sobre',
-                '<div>Validador de Assinatura 1.1.1026 Copyright (C) 2026 DTIS</div>'
+                '<div>Validador de Assinatura 1.2.1026 Copyright (C) 2026 DTIS</div>'
             );
         });
 
@@ -1040,7 +1156,7 @@
             }
         });
     </script>
-    <script src="script.js?v=5"></script>
+    <script src="script.js?v=6"></script>
 </body>
 
 </html>

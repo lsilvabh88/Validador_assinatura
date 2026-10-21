@@ -82,6 +82,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = result.data;
 
             // ════════════════════════════════════════════════════════════════
+            // URL QUEBRADA OU PORTAL DO PRESTADOR INDISPONÍVEL
+            // Trata graciosamente links fora do ar ou quebrados (ex: assistant.memed.com.br)
+            // ════════════════════════════════════════════════════════════════
+            if (data && data.urlIndisponivel) {
+                showUrlIndisponivel(data, urlValue);
+                return;
+            }
+
+            // ════════════════════════════════════════════════════════════════
             // MÉTODO 2: Página HTML externa (portal de prestador externo)
             // Abre o frame para que o usuário baixe o PDF e anexe na tela de upload.
             // ════════════════════════════════════════════════════════════════
@@ -105,9 +114,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch (err) {
             console.error(err);
-            showError('Não foi possível obter resposta da validação.', 'Verifique se a URL do documento é acessível.');
-            showPdf(urlValue);
-            adicionarBotaoUploadManual();
+            showUrlIndisponivel({
+                titulo: 'Falha de Conexão com o Endereço',
+                error: 'Não foi possível estabelecer comunicação com o endereço fornecido.',
+                dica: 'Certifique-se de que a URL e o endereço estão corretos ou se o Portal Externo do Prestador está apresentando indisponibilidade.'
+            }, urlValue);
         } finally {
             loadingState.classList.add('hidden');
             validateBtn.disabled = false;
@@ -419,6 +430,146 @@ document.addEventListener('DOMContentLoaded', () => {
 
         setupDropZone();
         resultArea.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    // ── Interface de Alerta: Portal Externo Quebrado ou Indisponível ──────────
+    function showUrlIndisponivel(data, url) {
+        // Fecha o frame lateral para evitar exibição de página offline ou erro no iframe
+        mainEl.classList.remove('split-view');
+        pdfPanel.classList.remove('visible');
+        pdfFrame.src = '';
+
+        resultArea.className = 'result-area warning';
+        resultArea.classList.remove('hidden');
+
+        const titulo = data.titulo || 'Portal Externo Indisponível ou Endereço Incorreto';
+        const motivo = data.error || 'Não foi possível estabelecer comunicação com o endereço fornecido.';
+        const dica = data.dica || 'Certifique-se de que a URL e o endereço estão corretos ou se o Portal Externo do Prestador está apresentando indisponibilidade.';
+
+        resultText.innerHTML = `
+            <div class="res-header warn-header" style="display:flex;align-items:center;gap:8px;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                    <line x1="12" y1="9" x2="12" y2="13"></line>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+                <span>${esc(titulo)}</span>
+            </div>
+            <div class="res-section">
+                <div class="url-error-badge">Atenção • Prestador Indisponível</div>
+                
+                <p style="font-size:0.86rem;color:#1e293b;font-weight:600;margin-bottom:0.35rem;line-height:1.4;">
+                    ${esc(motivo)}
+                </p>
+                <p style="font-size:0.82rem;color:#64748b;margin-bottom:0.75rem;line-height:1.45;">
+                    ${esc(dica)}
+                </p>
+
+                <div class="url-box">
+                    <span style="color:#64748b;font-size:0.74rem;display:block;margin-bottom:2px;font-family:sans-serif;">Endereço analisado:</span>
+                    <code>${esc(url)}</code>
+                </div>
+
+                <div class="action-card-container">
+                    <!-- Opção 1: Verificar URL no Navegador -->
+                    <div class="action-card">
+                        <div class="action-card-title">
+                            <span class="action-num">1</span>
+                            <span>Verificar URL no Navegador de Internet</span>
+                        </div>
+                        <div class="action-card-text">
+                            Tente abrir o link diretamente em uma nova aba do navegador para verificar se o portal do prestador está respondendo:
+                        </div>
+                        <a href="${esc(url)}" target="_blank" rel="noopener noreferrer" class="btn-action-link">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                            Abrir endereço diretamente no Navegador ↗
+                        </a>
+                    </div>
+
+                    <!-- Opção 2: QR-Code -->
+                    <div class="action-card">
+                        <div class="action-card-title">
+                            <span class="action-num">2</span>
+                            <span>Leitura Direta do QR-Code</span>
+                        </div>
+                        <div class="action-card-text">
+                            Gentileza <strong>realizar a leitura do QR-Code diretamente na câmera do celular ou leitor de código</strong> para validação no portal do prestador.
+                        </div>
+                    </div>
+
+                    <!-- Opção 3: Validador ITI Oficial -->
+                    <div class="action-card" style="border-left: 3px solid #16a34a;">
+                        <div class="action-card-title">
+                            <span class="action-num" style="background:#16a34a;">3</span>
+                            <span>Usar Diretamente o Validador ITI Oficial</span>
+                        </div>
+                        <div class="action-card-text">
+                            Caso o portal do prestador esteja indisponível ou você queira validar nos servidores federais do Instituto Nacional de Tecnologia da Informação:
+                        </div>
+                        <a href="https://validar.iti.gov.br/" target="_blank" rel="noopener noreferrer" class="btn-action-link btn-iti">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                            Acessar Validador ITI Oficial (validar.iti.gov.br) ↗
+                        </a>
+                    </div>
+
+                    <!-- Opção 4: Contingência por Upload de Arquivo -->
+                    <div class="action-card" style="border-left: 3px solid var(--mv-accent);">
+                        <div class="action-card-title">
+                            <span class="action-num" style="background:var(--mv-accent);">4</span>
+                            <span>Já possui o arquivo PDF do documento?</span>
+                        </div>
+                        <div class="action-card-text" style="margin-bottom:0.6rem;">
+                            Se você já fez o download do arquivo PDF anteriormente ou o recebeu como anexo, valide agora mesmo:
+                        </div>
+
+                        <button type="button" class="btn-upload-action" id="btnUploadIndisponivel" onclick="document.getElementById('fileUpload').click()">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="17 8 12 3 7 8"></polyline>
+                                <line x1="12" y1="3" x2="12" y2="15"></line>
+                            </svg>
+                            Validar documento por upload de arquivo
+                        </button>
+
+                        <div class="drop-zone" id="dropZoneIndisponivel" onclick="document.getElementById('fileUpload').click()" style="margin-top:0.6rem;">
+                            <span>📁 Ou arraste o arquivo PDF diretamente para cá</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        setupDropZoneIndisponivel();
+        resultArea.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    // ── Dropzone para a tela de URL indisponível ──────────────────────────────
+    function setupDropZoneIndisponivel() {
+        const dropZone = document.getElementById('dropZoneIndisponivel');
+        if (!dropZone) return;
+
+        ['dragenter', 'dragover'].forEach(name => {
+            dropZone.addEventListener(name, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                dropZone.classList.add('dragover');
+            });
+        });
+
+        ['dragleave', 'drop'].forEach(name => {
+            dropZone.addEventListener(name, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                dropZone.classList.remove('dragover');
+            });
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            const files = e.dataTransfer && e.dataTransfer.files;
+            if (files && files.length > 0) {
+                handleFileUpload(files[0]);
+            }
+        });
     }
 
     // ── Botão de contingência para upload manual ─────────────────────────────
